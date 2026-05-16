@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a4a80">
+<meta name="description" content="空に向けるだけで天気予報が現れるWebAR">
+<title>WeathWithAR</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Cormorant+SC:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Cormorant Garamond',serif}
+#cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+#splash{position:fixed;inset:0;z-index:200;background:linear-gradient(175deg,#1a5090,#2e72b8 20%,#4e98d8 42%,#7abcec 62%,#a8d8f6 80%,#cce8fa);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 32px;transition:opacity .9s ease}
+#splash.hide{opacity:0;pointer-events:none}
+.sp-title{font-family:'Cormorant Garamond',serif;font-weight:300;font-style:italic;font-size:clamp(36px,9vw,48px);letter-spacing:6px;color:rgba(255,255,255,.92);margin-bottom:6px}
+.sp-tagline{font-family:'Cormorant SC',serif;font-weight:300;font-size:9px;letter-spacing:5px;color:rgba(255,255,255,.45);margin-bottom:60px}
+.sp-dots{display:flex;gap:8px;margin-bottom:16px}
+.sp-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.45);animation:dotPulse 1.4s ease-in-out infinite}
+.sp-dot:nth-child(2){animation-delay:.2s}.sp-dot:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,80%,100%{transform:scale(1);opacity:.35}40%{transform:scale(1.4);opacity:1}}
+.sp-msg{font-family:'Cormorant SC',serif;font-weight:300;font-size:9px;letter-spacing:4px;color:rgba(255,255,255,.4)}
+.sp-err{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:13px;letter-spacing:2px;color:rgba(255,200,200,.85);text-align:center;line-height:2;display:none;max-width:290px;margin-top:20px}
+.sp-retry{background:transparent;border:1px solid rgba(255,255,255,.28);color:rgba(255,255,255,.65);padding:10px 28px;margin-top:16px;font-family:'Cormorant SC',serif;font-weight:300;font-size:10px;letter-spacing:4px;cursor:pointer;display:none;transition:all .3s}
+#ar{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity 1s ease}
+#ar.on{opacity:1}
+#topbar{position:absolute;top:max(env(safe-area-inset-top,0px),28px);left:0;right:0;display:flex;justify-content:space-between;padding:0 26px}
+#locName{font-family:'Cormorant SC',serif;font-weight:300;font-size:10px;letter-spacing:3px;transition:color 1.8s}
+#clock{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:18px;letter-spacing:2px;transition:color 1.8s}
+#wx{position:absolute;top:50%;left:50%;transform:translate(-50%,calc(-50% + 18px));width:min(420px,96vw);display:flex;flex-direction:column;align-items:center;opacity:0;transition:opacity .9s ease,transform .9s ease}
+#wx.show{opacity:1;transform:translate(-50%,-50%)}
+#mainRow{display:flex;align-items:center;gap:clamp(10px,3vw,18px);margin-bottom:20px}
+.wx-icon{width:clamp(44px,11vw,58px);height:clamp(44px,11vw,58px);flex-shrink:0;transition:opacity 1.5s;display:none}
+.wx-icon.active{display:flex;align-items:center;justify-content:center}
+.wx-icon svg{width:100%;height:100%;overflow:visible}
+#temp{font-family:'Cormorant Garamond',serif;font-weight:300;font-style:italic;font-size:clamp(88px,23vw,124px);letter-spacing:-2px;line-height:.88;flex-shrink:0;transition:color 1.8s ease}
+#unitCondCol{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding-top:8px}
+#unit{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(28px,7vw,38px);line-height:1;transition:color 1.8s ease}
+#cond{font-family:'Cormorant Garamond',serif;font-weight:300;font-style:italic;font-size:clamp(12px,3.2vw,16px);letter-spacing:3px;white-space:nowrap;transition:color 1.8s ease}
+.hairline{width:min(190px,52vw);height:1px;margin-bottom:18px;transition:background 1.8s ease}
+#stats{display:flex;gap:clamp(14px,5vw,34px)}
+.stat{display:flex;flex-direction:column;align-items:center;gap:5px}
+.st-l{font-family:'Cormorant SC',serif;font-weight:300;font-size:clamp(7px,1.8vw,9px);letter-spacing:3px;transition:color 1.8s}
+.st-v{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(19px,5vw,24px);letter-spacing:1px;line-height:1;transition:color 1.8s}
+.st-u{font-family:'Cormorant SC',serif;font-weight:300;font-size:clamp(7px,1.8vw,9px);letter-spacing:2px;transition:color 1.8s}
+#guide{position:absolute;bottom:max(env(safe-area-inset-bottom,0px),30px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px}
+.g-track{width:140px;height:1px;background:rgba(255,255,255,.1);overflow:hidden}
+.g-fill{height:100%;background:rgba(255,255,255,.5);transition:width .08s linear}
+.g-lbl{font-family:'Cormorant SC',serif;font-weight:300;font-size:8px;letter-spacing:3px;transition:color 1.8s}
+#logo{position:absolute;bottom:max(env(safe-area-inset-bottom,0px),28px);right:22px;font-family:'Cormorant Garamond',serif;font-weight:300;font-style:italic;font-size:12px;letter-spacing:3px;transition:color 1.8s}
+#iosTap{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);z-index:15;font-family:'Cormorant SC',serif;font-weight:300;font-size:9px;letter-spacing:3px;color:rgba(255,255,255,.5);display:none;pointer-events:none;animation:blink 1.8s ease-in-out infinite;white-space:nowrap}
+@keyframes blink{0%,100%{opacity:.55}50%{opacity:.15}}
+@keyframes spinSlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+</style>
+</head>
+<body>
+<video id="cam" autoplay playsinline muted></video>
+<div id="splash">
+  <div class="sp-title">WeathWithAR</div>
+  <div class="sp-tagline">Look up · Weather appears</div>
+  <div class="sp-dots"><div class="sp-dot"></div><div class="sp-dot"></div><div class="sp-dot"></div></div>
+  <div class="sp-msg" id="spMsg">Initialising...</div>
+  <div class="sp-err" id="spErr"></div>
+  <button class="sp-retry" id="spRetry" onclick="init()">Retry</button>
+</div>
+<div id="ar">
+  <div id="topbar">
+    <div id="locName">—</div>
+    <div id="clock">--:--</div>
+  </div>
+  <div id="wx">
+    <div id="mainRow">
+      <div class="wx-icon active" id="icon-clear">
+        <svg viewBox="0 0 68 68" fill="none">
+          <g id="sun-g" style="transform-origin:34px 34px;animation:spinSlow 60s linear infinite">
+            <line x1="34" y1="6" x2="34" y2="14" stroke-linecap="round"/>
+            <line x1="34" y1="54" x2="34" y2="62" stroke-linecap="round"/>
+            <line x1="6" y1="34" x2="14" y2="34" stroke-linecap="round"/>
+            <line x1="54" y1="34" x2="62" y2="34" stroke-linecap="round"/>
+            <line x1="15" y1="15" x2="20.7" y2="20.7" stroke-linecap="round"/>
+            <line x1="47.3" y1="47.3" x2="53" y2="53" stroke-linecap="round"/>
+            <line x1="53" y1="15" x2="47.3" y2="20.7" stroke-linecap="round"/>
+            <line x1="15" y1="53" x2="20.7" y2="47.3" stroke-linecap="round"/>
+          </g>
+          <circle cx="34" cy="34" r="10"/>
+        </svg>
+      </div>
+      <div class="wx-icon" id="icon-cloud">
+        <svg viewBox="0 0 68 68" fill="none">
+          <g style="animation:floatY 5s ease-in-out infinite">
+            <path d="M14 44 Q8 44 7 37 Q2 35 2 29 Q2 22 9 21 Q10 14 18 13 Q22 6 30 8 Q36 2 44 5 Q52 8 52 17 Q58 16 60 23 Q63 31 57 36 Q54 43 46 43 Z"/>
+            <path d="M22 52 Q16 52 15 46 Q10 44 10 39 Q10 33 16 33 Q17 28 23 27 Q29 26 32 31 Q36 27 42 29 Q48 31 47 37 Q52 37 52 42 Q52 48 46 49 Z" opacity="0.7"/>
+          </g>
+        </svg>
+      </div>
+      <div class="wx-icon" id="icon-rain">
+        <svg viewBox="0 0 68 68" fill="none">
+          <style>.rain-drop{animation:rainDrop 1.2s ease-in infinite;opacity:0}.rain-drop:nth-child(2){animation-delay:.2s}.rain-drop:nth-child(3){animation-delay:.5s}.rain-drop:nth-child(4){animation-delay:.8s}.rain-drop:nth-child(5){animation-delay:.3s}@keyframes rainDrop{0%{opacity:0;transform:translateY(0)}40%{opacity:1}100%{opacity:0;transform:translateY(10px)}}</style>
+          <path d="M12 36 Q7 36 6 30 Q1 28 2 22 Q2 16 9 15 Q10 9 18 8 Q24 3 32 6 Q38 1 46 5 Q54 9 52 19 Q57 18 58 24 Q61 31 55 35 Q52 41 44 40 Z"/>
+          <g class="rain-drop"><line x1="20" y1="46" x2="17" y2="54" stroke-linecap="round"/></g>
+          <g class="rain-drop"><line x1="30" y1="46" x2="27" y2="54" stroke-linecap="round"/></g>
+          <g class="rain-drop"><line x1="40" y1="46" x2="37" y2="54" stroke-linecap="round"/></g>
+          <g class="rain-drop"><line x1="25" y1="52" x2="22" y2="60" stroke-linecap="round"/></g>
+          <g class="rain-drop"><line x1="35" y1="52" x2="32" y2="60" stroke-linecap="round"/></g>
+        </svg>
+      </div>
+      <div class="wx-icon" id="icon-snow">
+        <svg viewBox="0 0 68 68" fill="none">
+          <style>.snow-flake{animation:snowFlake 2s ease-in-out infinite}.snow-flake:nth-child(2){animation-delay:.4s}.snow-flake:nth-child(3){animation-delay:.8s}.snow-flake:nth-child(4){animation-delay:1.2s}.snow-flake:nth-child(5){animation-delay:.6s}@keyframes snowFlake{0%,100%{opacity:.4;transform:translateY(0)}50%{opacity:1;transform:translateY(4px)}}</style>
+          <path d="M12 36 Q7 36 6 30 Q1 28 2 22 Q2 16 9 15 Q10 9 18 8 Q24 3 32 6 Q38 1 46 5 Q54 9 52 19 Q57 18 58 24 Q61 31 55 35 Q52 41 44 40 Z"/>
+          <g class="snow-flake"><line x1="20" y1="48" x2="20" y2="54" stroke-linecap="round"/><line x1="17" y1="51" x2="23" y2="51" stroke-linecap="round"/></g>
+          <g class="snow-flake"><line x1="30" y1="48" x2="30" y2="54" stroke-linecap="round"/><line x1="27" y1="51" x2="33" y2="51" stroke-linecap="round"/></g>
+          <g class="snow-flake"><line x1="40" y1="48" x2="40" y2="54" stroke-linecap="round"/><line x1="37" y1="51" x2="43" y2="51" stroke-linecap="round"/></g>
+          <g class="snow-flake"><line x1="25" y1="56" x2="25" y2="62" stroke-linecap="round"/><line x1="22" y1="59" x2="28" y2="59" stroke-linecap="round"/></g>
+          <g class="snow-flake"><line x1="35" y1="56" x2="35" y2="62" stroke-linecap="round"/><line x1="32" y1="59" x2="38" y2="59" stroke-linecap="round"/></g>
+        </svg>
+      </div>
+      <div id="temp">--</div>
+      <div id="unitCondCol">
+        <div id="unit">°C</div>
+        <div id="cond">—</div>
+      </div>
+    </div>
+    <div class="hairline" id="hl"></div>
+    <div id="stats">
+      <div class="stat"><div class="st-l">Humidity</div><div class="st-v" id="sHum">--</div><div class="st-u">%</div></div>
+      <div class="stat"><div class="st-l">Precip.</div><div class="st-v" id="sRain">--</div><div class="st-u">%</div></div>
+      <div class="stat"><div class="st-l">Visibility</div><div class="st-v" id="sVis">--</div><div class="st-u">km</div></div>
+      <div class="stat"><div class="st-l">Wind</div><div class="st-v" id="sWind">--</div><div class="st-u">m/s</div></div>
+    </div>
+  </div>
+  <div id="guide">
+    <div class="g-track"><div class="g-fill" id="gFill" style="width:0%"></div></div>
+    <div class="g-lbl" id="gLbl">Look up at the sky</div>
+  </div>
+  <div id="logo">WeathWithAR</div>
+</div>
+<div id="iosTap">Tap to enable motion sensor</div>
+<script>
+'use strict';
+const THEME={dawn:{clear:['','rgba(255,245,235,.88)','rgba(255,238,220,.62)','rgba(255,230,205,.38)','rgba(255,230,205,.20)','rgba(255,240,222,.72)'],cloud:['','rgba(255,242,236,.82)','rgba(255,235,226,.56)','rgba(255,228,216,.34)','rgba(255,228,216,.18)','rgba(255,238,228,.66)'],rain:['','rgba(245,238,234,.78)','rgba(238,230,225,.52)','rgba(230,222,216,.32)','rgba(230,222,216,.16)','rgba(240,234,228,.62)'],snow:['','rgba(248,244,255,.84)','rgba(240,236,250,.56)','rgba(232,228,244,.35)','rgba(232,228,244,.18)','rgba(244,240,255,.68)']},day:{clear:['','rgba(255,255,255,.90)','rgba(255,255,255,.62)','rgba(255,255,255,.38)','rgba(255,255,255,.20)','rgba(255,255,255,.75)'],cloud:['','rgba(245,250,255,.86)','rgba(235,244,252,.58)','rgba(224,236,248,.36)','rgba(224,236,248,.18)','rgba(240,248,255,.70)'],rain:['','rgba(225,236,246,.82)','rgba(212,226,240,.55)','rgba(198,216,232,.34)','rgba(198,216,232,.16)','rgba(218,232,244,.65)'],snow:['','rgba(240,244,255,.88)','rgba(230,236,252,.60)','rgba(218,228,248,.36)','rgba(218,228,248,.18)','rgba(236,242,255,.72)']},dusk:{clear:['','rgba(255,240,218,.90)','rgba(255,230,200,.62)','rgba(255,220,182,.38)','rgba(255,220,182,.20)','rgba(255,236,210,.74)'],cloud:['','rgba(255,244,238,.84)','rgba(248,234,226,.56)','rgba(240,224,214,.34)','rgba(240,224,214,.18)','rgba(252,240,232,.68)'],rain:['','rgba(242,236,232,.80)','rgba(232,226,220,.53)','rgba(222,214,208,.32)','rgba(222,214,208,.16)','rgba(236,230,226,.63)'],snow:['','rgba(248,244,255,.86)','rgba(238,234,252,.57)','rgba(226,224,248,.35)','rgba(226,224,248,.18)','rgba(244,240,255,.70)']},night:{clear:['','rgba(195,215,255,.72)','rgba(178,202,248,.46)','rgba(160,190,240,.28)','rgba(160,190,240,.13)','rgba(188,210,252,.55)'],cloud:['','rgba(185,200,230,.66)','rgba(168,186,220,.43)','rgba(152,172,210,.26)','rgba(152,172,210,.12)','rgba(178,196,226,.50)'],rain:['','rgba(175,196,224,.62)','rgba(158,182,215,.39)','rgba(142,168,206,.24)','rgba(142,168,206,.11)','rgba(168,190,220,.47)'],snow:['','rgba(205,215,245,.68)','rgba(190,202,238,.44)','rgba(175,190,230,.27)','rgba(175,190,230,.13)','rgba(196,208,242,.52)']}};
+function wxIcon(id){if(id===800)return'clear';if(id>=801&&id<=804)return'cloud';if((id>=300&&id<400)||(id>=500&&id<600)||id>=200&&id<300)return'rain';if(id>=600&&id<700)return'snow';return'cloud'}
+function getTimeKey(){const h=new Date().getHours();return h>=4&&h<8?'dawn':h>=8&&h<17?'day':h>=17&&h<20?'dusk':'night'}
+function applyTheme(ik,tk){const[,mainC,subC,lblC,lineC,svgC]=THEME[tk][ik]||THEME[tk].clear;document.getElementById('temp').style.color=mainC;document.getElementById('unit').style.color=subC;document.getElementById('cond').style.color=subC;document.getElementById('hl').style.background=lineC;document.querySelectorAll('.st-v').forEach(e=>e.style.color=subC);document.querySelectorAll('.st-l').forEach(e=>e.style.color=lblC);document.querySelectorAll('.st-u').forEach(e=>e.style.color=lblC);document.getElementById('locName').style.color=lblC;document.getElementById('clock').style.color=lblC;document.getElementById('logo').style.color=lineC;document.querySelector('.g-lbl').style.color=lblC;document.querySelectorAll('.wx-icon svg circle,.wx-icon svg path,.wx-icon svg line').forEach(el=>{el.setAttribute('stroke',svgC);if(el.tagName==='path'||el.tagName==='circle')el.setAttribute('fill','none');if(!el.getAttribute('stroke-width'))el.setAttribute('stroke-width','1')});document.querySelectorAll('.wx-icon').forEach(e=>e.classList.remove('active'));const ic=document.getElementById('icon-'+ik);if(ic)ic.classList.add('active')}
+let lat=null,lon=null,wxLoaded=false,isOn=false;
+let _stream=null,_refreshTimer=null;
+window.addEventListener('DOMContentLoaded',init);
+async function init(){
+  setMsg('Starting camera...');showErr(false);
+  // リトライ時: 前のストリームとタイマーを破棄
+  if(_stream){_stream.getTracks().forEach(t=>t.stop());_stream=null;}
+  if(_refreshTimer){clearInterval(_refreshTimer);_refreshTimer=null;}
+  try{
+    await startCamera();
+    setMsg('Locating...');
+    const pos=await getGPS();lat=pos.lat;lon=pos.lon;
+    setMsg('Fetching weather...');
+    await fetchAll();
+    wxLoaded=true;hideSplash();
+    document.getElementById('ar').classList.add('on');
+    startClock();initOrient();
+  }catch(e){showErr(e.message||'Something went wrong');}
+}
+function setMsg(t){document.getElementById('spMsg').textContent=t}
+function hideSplash(){const s=document.getElementById('splash');s.classList.add('hide');setTimeout(()=>s.style.display='none',950)}
+function showErr(msg){const err=document.getElementById('spErr'),btn=document.getElementById('spRetry'),dots=document.querySelector('.sp-dots');if(!msg){err.style.display='none';btn.style.display='none';dots.style.display='flex';return}err.textContent=msg;err.style.display='block';btn.style.display='inline-block';dots.style.display='none'}
+async function startCamera(){_stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920}},audio:false});const v=document.getElementById('cam');v.srcObject=_stream;await new Promise((res,rej)=>{v.onloadedmetadata=res;v.onerror=rej;})}
+function getGPS(){return new Promise((res,rej)=>{if(!navigator.geolocation){rej(new Error('GPS not supported'));return}navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lon:p.coords.longitude}),()=>rej(new Error('Please allow location access')),{timeout:12000,enableHighAccuracy:true})})}
+async function apiFetch(type){const r=await fetch(`/api/weather?lat=${lat}&lon=${lon}&type=${type}`);if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||`API ${r.status}`)}return r.json()}
+async function fetchAll(){
+  const tk=getTimeKey();
+  const[cur,fc]=await Promise.all([apiFetch('current'),apiFetch('forecast').catch(()=>null)]);
+  // 防御チェック: レスポンスが正常かを確認
+  if(!cur||!cur.weather||!cur.weather[0])throw new Error('Invalid weather data received');
+  const ik=wxIcon(cur.weather[0].id);
+  document.getElementById('temp').textContent=Math.round(cur.main.temp);
+  document.getElementById('cond').textContent=cur.weather[0].description;
+  document.getElementById('locName').textContent=cur.name||'—';
+  document.getElementById('sHum').textContent=cur.main.humidity;
+  document.getElementById('sWind').textContent=cur.wind?.speed?.toFixed(1)??'--';
+  document.getElementById('sVis').textContent=cur.visibility?(cur.visibility/1000).toFixed(1):'--';
+  if(fc)document.getElementById('sRain').textContent=Math.round((fc.list?.[0]?.pop??0)*100);
+  applyTheme(ik,tk);
+  // setIntervalを_refreshTimerに保存(リトライ時に破棄できるよう)
+  _refreshTimer=setInterval(async()=>{
+    try{
+      const d=await apiFetch('current');
+      if(!d?.weather?.[0])return;
+      const i=wxIcon(d.weather[0].id);
+      document.getElementById('temp').textContent=Math.round(d.main.temp);
+      document.getElementById('cond').textContent=d.weather[0].description;
+      document.getElementById('sHum').textContent=d.main.humidity;
+      document.getElementById('sWind').textContent=d.wind?.speed?.toFixed(1)??'--';
+      document.getElementById('sVis').textContent=d.visibility?(d.visibility/1000).toFixed(1):'--';
+      applyTheme(i,getTimeKey());
+    }catch{}
+  },600000);
+}
+function startClock(){if(_clockTimer)return;const el=document.getElementById('clock');const tick=()=>el.textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});tick();_clockTimer=setInterval(tick,1000)}
+function initOrient(){function bind(){window.addEventListener('deviceorientation',onOrient,true)}if(typeof DeviceOrientationEvent?.requestPermission==='function'){document.getElementById('iosTap').style.display='block';document.body.style.pointerEvents='auto';document.body.addEventListener('click',async()=>{try{if(await DeviceOrientationEvent.requestPermission()==='granted')bind()}catch{bind()}document.getElementById('iosTap').style.display='none'},{once:true})}else bind()}
+function onOrient(e){const beta=e.beta??45;const pct=beta<28?Math.min(100,Math.max(0,(28-beta)/(28-(-40))*100)):0;document.getElementById('gFill').style.width=pct+'%';document.getElementById('gLbl').textContent=pct>5?`▲ ${Math.round(pct)}%`:'Look up at the sky';const show=pct>40&&wxLoaded;if(show!==isOn){isOn=show;document.getElementById('wx').classList.toggle('show',show)}}
+</script>
+</body>
+</html>
