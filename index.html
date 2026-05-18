@@ -18,14 +18,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
 /* ── Splash ── */
 #splash{position:fixed;inset:0;z-index:200;background:linear-gradient(175deg,#1a5090,#2e72b8 20%,#4e98d8 42%,#7abcec 62%,#a8d8f6 80%,#cce8fa);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 32px;transition:opacity .9s ease}
 #splash.hide{opacity:0;pointer-events:none}
-#splash-logo{width:500px;height:auto;display:block;margin-top:0px;margin-bottom:-75px}
+#splash-logo{width:min(420px,60vw);height:auto;display:block;margin-top:-75px;margin-bottom:2px}
 .sp-tagline{font-family:'Cormorant SC',serif;font-weight:300;font-size:9px;letter-spacing:5px;color:rgba(255,255,255,.45);margin-bottom:50px}
 .sp-dots{display:flex;gap:8px;margin-bottom:14px}
 .sp-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.45);animation:dotPulse 1.4s ease-in-out infinite}
 .sp-dot:nth-child(2){animation-delay:.2s}.sp-dot:nth-child(3){animation-delay:.4s}
 @keyframes dotPulse{0%,80%,100%{transform:scale(1);opacity:.35}40%{transform:scale(1.4);opacity:1}}
 .sp-msg{font-family:'Cormorant SC',serif;font-weight:300;font-size:9px;letter-spacing:4px;color:rgba(255,255,255,.4)}
-#spStart{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.45);color:rgba(255,255,255,.92);padding:14px 40px;margin-top:28px;font-family:'Cormorant SC',serif;font-weight:300;font-size:11px;letter-spacing:5px;cursor:pointer;display:none;transition:all .3s}
+#spStart{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.45);color:rgba(255,255,255,.92);padding:14px 40px;margin-top:28px;font-family:'Cormorant SC',serif;font-weight:300;font-size:11px;letter-spacing:5px;cursor:pointer;visibility:hidden;transition:all .3s}
 .sp-err{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:13px;letter-spacing:2px;color:rgba(255,200,200,.85);text-align:center;line-height:2;display:none;max-width:290px;margin-top:16px}
 #spRetry{background:transparent;border:1px solid rgba(255,255,255,.28);color:rgba(255,255,255,.65);padding:10px 28px;margin-top:12px;font-family:'Cormorant SC',serif;font-weight:300;font-size:10px;letter-spacing:4px;cursor:pointer;display:none}
 
@@ -247,7 +247,7 @@ function onOrient(e){
   if(show!==isOn){isOn=show;document.getElementById('wx').classList.toggle('show',show);}
 }
 async function onStartTap(){
-  document.getElementById('spStart').style.display='none';
+  document.getElementById('spStart').style.visibility='hidden';
   try{
     const perm=await DeviceOrientationEvent.requestPermission();
     if(perm==='granted'){window.addEventListener('deviceorientation',onOrient,true);}
@@ -261,7 +261,7 @@ async function init(){
   if(_refreshTimer){clearInterval(_refreshTimer);_refreshTimer=null;}
   wxLoaded=false;isOn=false;
   document.getElementById('wx').classList.remove('show');
-  document.getElementById('spStart').style.display='none';
+  document.getElementById('spStart').style.visibility='hidden';
   try{
     await startCamera();
     setMsg('Locating...');
@@ -274,7 +274,7 @@ async function init(){
     // iOS: センサー許可が必要
     if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
       setMsg('');
-      document.getElementById('spStart').style.display='inline-block';
+      document.getElementById('spStart').style.visibility='visible';
     }else{
       // Android等
       window.addEventListener('deviceorientation',onOrient,true);
