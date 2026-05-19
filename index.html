@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a4a80">
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <title>WeathWithAR</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Cormorant+SC:wght@300;400&display=swap" rel="stylesheet">
 <style>
@@ -18,7 +18,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
 /* ── Splash ── */
 #splash{position:fixed;inset:0;z-index:200;background:linear-gradient(175deg,#1a5090,#2e72b8 20%,#4e98d8 42%,#7abcec 62%,#a8d8f6 80%,#cce8fa);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 32px;transition:opacity .9s ease}
 #splash.hide{opacity:0;pointer-events:none}
-#splash-logo{width:min(420px,60vw);height:auto;display:block;margin-top:-75px;margin-bottom:2px}
+#splash-logo{width:min(420px,82vw);height:auto;display:block;margin-top:-75px;margin-bottom:2px}
 .sp-tagline{font-family:'Cormorant SC',serif;font-weight:300;font-size:9px;letter-spacing:5px;color:rgba(255,255,255,.45);margin-bottom:50px}
 .sp-dots{display:flex;gap:8px;margin-bottom:14px}
 .sp-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.45);animation:dotPulse 1.4s ease-in-out infinite}
@@ -240,7 +240,9 @@ function startClock(){
 }
 function onOrient(e){
   const beta=e.beta??45;
-  const pct=beta<28?Math.min(100,Math.max(0,(28-beta)/(68)*100)):0;
+  // iPhoneを空に向ける: betaが小さくなる(0に近づく)か負になる
+  // 地面向き: beta大(90近く) / 空向き: beta小(0以下)
+  const pct=beta<50?Math.min(100,Math.max(0,(50-beta)/90*100)):0;
   document.getElementById('gFill').style.width=pct+'%';
   document.getElementById('gLbl').textContent=pct>5?`▲ ${Math.round(pct)}%`:'Look up at the sky';
   const show=pct>40&&wxLoaded;
