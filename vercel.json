@@ -2,20 +2,28 @@
   "version": 2,
   "builds": [
     { "src": "api/weather.js", "use": "@vercel/node" },
-    { "src": "index.html",     "use": "@vercel/static" }
+    { "src": "index.html",     "use": "@vercel/static" },
+    { "src": "*.png",          "use": "@vercel/static" },
+    { "src": "*.svg",          "use": "@vercel/static" },
+    { "src": "manifest.json",  "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/weather",   "dest": "/api/weather.js" },
-    { "src": "/(.*)",          "dest": "/index.html" }
+    { "src": "/api/weather",            "dest": "/api/weather.js" },
+    { "src": "/apple-touch-icon.png",   "dest": "/apple-touch-icon.png" },
+    { "src": "/icon-192.png",           "dest": "/icon-192.png" },
+    { "src": "/icon-512.png",           "dest": "/icon-512.png" },
+    { "src": "/logo.svg",               "dest": "/logo.svg" },
+    { "src": "/manifest.json",          "dest": "/manifest.json" },
+    { "src": "/(.*)",                   "dest": "/index.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options",    "value": "nosniff" },
-        { "key": "X-Frame-Options",           "value": "DENY" },
-        { "key": "Referrer-Policy",           "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy",        "value": "camera=self, geolocation=self, gyroscope=self, accelerometer=self" }
+        { "key": "X-Content-Type-Options",  "value": "nosniff" },
+        { "key": "X-Frame-Options",         "value": "DENY" },
+        { "key": "Referrer-Policy",         "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",      "value": "camera=self, geolocation=self, gyroscope=self, accelerometer=self" }
       ]
     }
   ]
