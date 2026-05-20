@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{font-family:monospace;font-size:24px;padding:20px;background:#000;color:#fff}
+#val{font-size:48px;color:#0f0;margin:20px 0}
+</style>
+</head>
+<body>
+<div>スマホを空に向けてください</div>
+<div id="val">待機中...</div>
+<div id="log"></div>
+<script>
+function req(){
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(p=>{
+      if(p==='granted') start();
+    });
+  } else { start(); }
+}
+function start(){
+  window.addEventListener('deviceorientation',e=>{
+    document.getElementById('val').textContent=
+      'beta: '+Math.round(e.beta)+'° / gamma: '+Math.round(e.gamma)+'°';
+    document.getElementById('log').textContent=
+      '地面向き=大 / 空向き=?';
+  },true);
+}
+document.body.addEventListener('click', req, {once:true});
+document.getElementById('val').textContent='画面をタップ';
+</script>
+</body>
+</html>
